@@ -80,6 +80,7 @@ terraform-aws-ec2-webserver
         │
         └── outputs.tf
             └── Returns EC2 resource information
+```
 
 ---
 
@@ -452,7 +453,84 @@ terraform-aws-ec2-webserver
 
 ---
 
+# Why the Project Contains Two `variables.tf` Files and Two `outputs.tf` Files
+
+This project is organized using a modular Terraform architecture consisting of a **root module** and a **child EC2 module**.
+
+Each module is independent and therefore maintains its own `variables.tf` and `outputs.tf` files.
+
+## Root Module
+
+The root module is responsible for:
+
+- Receiving user-defined values from `terraform.tfvars`
+- Configuring the AWS provider
+- Calling the EC2 module
+- Displaying the final outputs after deployment
+
+The root `variables.tf` defines the input variables for the entire project, while the root `outputs.tf` displays the information returned by the EC2 module.
+
+---
+
+## EC2 Module
+
+The EC2 module is responsible for:
+
+- Receiving values from the root module
+- Creating the AWS EC2 instance
+- Returning information about the created instance
+
+The EC2 `variables.tf` defines the inputs required by the module, while the EC2 `outputs.tf` returns details such as the EC2 Instance ID, Public IP Address, Public DNS, and Availability Zone.
+
+---
+
+## Variable Flow
+
+```text
+terraform.tfvars
+        |
+        v
+Root variables.tf
+        |
+        v
+Root main.tf
+        |
+        v
+EC2 Module variables.tf
+        |
+        v
+AWS EC2 Instance
+```
+
+---
+
+## Output Flow
+
+```text
+AWS EC2 Instance
+        |
+        v
+EC2 Module outputs.tf
+        |
+        v
+Root outputs.tf
+        |
+        v
+terraform output
+```
+
+The use of separate `variables.tf` and `outputs.tf` files for each module promotes modularity, reusability, and separation of concerns, making the infrastructure easier to maintain and extend.
+
+---
+
 ## Creating Module Variables
+
+To make the module reusable, values were not hardcoded directly into the EC2 resource.
+
+Instead, input variables were created in:
+```text
+modules/ec2/variables.tf
+```
 
 The EC2 module receives the following inputs from the root module:
 
@@ -464,6 +542,24 @@ The EC2 module receives the following inputs from the root module:
 | `instance_name` | Defines the EC2 Name tag                                       |
 | `environment`   | Defines the deployment environment tag                         |
 | `owner`         | Defines the resource owner tag                                 |
+
+Example:
+```hcl
+variable "ami_id" {
+
+  description = "AMI ID for the EC2 instance"
+
+  type = string
+
+}
+```
+The module variables allow the same EC2 module to be reused with different:
+
+- AMIs
+- Instance types
+- Key pairs
+- Environments
+- Resource owners
 
 ---
 
@@ -586,9 +682,77 @@ tags = {
 
   Environment = "Development"
 
-  Owner = "YourName"
+  Owner = "Eniola"
 
 }
+```
+
+---
+
+## EC2 Module Outputs
+
+Outputs allow Terraform to return useful information about resources after deployment.
+
+The outputs were created inside:
+```text
+modules/ec2/outputs.tf
+```
+
+The module returns:
+
+| Output              | Purpose                            |
+| ------------------- | ---------------------------------- |
+| `instance_id`       | Returns the unique EC2 instance ID |
+| `public_ip`         | Returns the public IPv4 address    |
+| `public_dns`        | Returns the public DNS hostname    |
+| `availability_zone` | Returns the AWS Availability Zone  |
+
+Example:
+```hcl
+output "instance_id" {
+
+  description = "ID of the EC2 instance"
+
+  value = aws_instance.webserver.id
+
+}
+```
+
+---
+
+## EC2 Module Data Flow
+
+The EC2 module follows this input and output flow:
+
+## Input Flow
+```text
+terraform.tfvars
+        |
+        v
+Root variables.tf
+        |
+        v
+Root main.tf
+        |
+        v
+EC2 Module variables.tf
+        |
+        v
+EC2 Instance Creation
+```
+
+## Output Flow
+```text
+EC2 Instance
+        |
+        v
+EC2 Module outputs.tf
+        |
+        v
+Root outputs.tf
+        |
+        v
+terraform output
 ```
 
 ---
